@@ -1,3 +1,5 @@
+#-*- coding:utf-8 -*-
+
 import os
 import time
 import datetime
@@ -12,7 +14,7 @@ def on_connect(client, userdata, flags, rc):
         Connected = True                #Signal connection 
 
 def write_log(message):  
-    log = open("script/LogReset.txt", "a+")
+    log = open("/home/pi/logs/LogReset.txt", "a+")
     log.write(message)
     log.close()	
     
@@ -35,7 +37,7 @@ TopicCommand = "mqtt2p4d/command"
 
 t1Minutes = int(datetime.time.strftime(t1, "%H"))*60 + int(datetime.time.strftime(t1, "%M"))
 t2Minutes = int(datetime.time.strftime(t2, "%H"))*60 + int(datetime.time.strftime(t2, "%M"))
-        
+
 write_log(time.strftime("%d.%m.%Y, %H:%M:%S", time.localtime()) + "\n")
 Connected = False
 client = mqttClient.Client("MeinResetScript")
@@ -52,7 +54,9 @@ while Connected != True:    #Wait for connection
         write_log("Verbindung zum Broker fehlgeschlagen! Verlasse Script\n\n")
         sys.exit()
 
-write_log("Verbindung zum Broker hergestellt! Scrheibe Standard-Zeiten\n")
+write_log("Verbindung zum Broker hergestellt! Schreibe Standard-Zeiten\n")
+write_log("Zeit 1: " + datetime.time.strftime(t1, "%H:%M") + " Uhr\n")
+write_log("Zeit 2: " + datetime.time.strftime(t2, "%H:%M") + " Uhr\n")
 
 message_set1 = {"command": "parstore", "address": AdresseZeit1, "value" : str(t1Minutes)}
 message_set2 = {"command": "parstore", "address": AdresseZeit2, "value" : str(t2Minutes)}

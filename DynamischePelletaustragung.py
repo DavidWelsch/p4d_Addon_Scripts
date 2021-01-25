@@ -16,22 +16,25 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, message):
     if "Status" in message.topic:
-	    global Status
-	    Status = message.payload[11:None][None:-2]
+        global Status
+        Status = json.loads(message.payload)["value"]
+        
     if "Fuellstand" in message.topic:
         global Pelletstand
-        Abgeschnitten = float(message.payload[10:None][None:-2])
-        Pelletstand = int(round(Abgeschnitten,0))
+        Pelletstand = int(round(json.loads(message.payload)["value"],0))
 	
 def write_log(message):  
-    log = open("script/Log_" + Datum + ".txt", "a+")
+    log = open("/home/pi/logs/Log_" + Datum + ".txt", "a+")
     log.write(message)
     log.close()
 
 def write_times(message):
-    times = open("script/Zeitpunkte_" + Datum + ".txt", "a+")
+    times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
     log.write(message)
     log.close()
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 Datum = time.strftime("%Y-%m-%d", time.localtime())
 Uhrzeit = time.strftime("%H:%M:%S", time.localtime())
