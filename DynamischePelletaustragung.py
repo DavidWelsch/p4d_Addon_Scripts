@@ -30,8 +30,8 @@ def write_log(message):
 
 def write_times(message):
     times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
-    log.write(message)
-    log.close()
+    times.write(message)
+    times.close()
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
