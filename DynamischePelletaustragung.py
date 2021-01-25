@@ -30,8 +30,8 @@ def write_log(message):
 
 def write_times(message):
     times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
-    log.write(message)
-    log.close()
+    times.write(message)
+    times.close()
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -101,6 +101,7 @@ write_log("Status: " + str(Status) + ", Pelletstand: " + str(Pelletstand) + "%\n
 WasGeandert = False
 
 if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
+    write_log("Will Zeit vorsetzen")
     WasGeandert = True
     value = int((minutesnow + 5)) % 1440
     address = AdresseZeit1
@@ -131,6 +132,7 @@ abstandZuZweiterBefuellung = zweiteBefuellung-minutesnow
 
 if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abstandZuErsterBefuellung > 0 and abstandZuErsterBefuellung < 15:
     WasGeandert = True
+    write_log("Will Zeit in Zukunft setzen wegen Zeit 1 zu nah")
     value = minutesnow + 30
     message_set = {"command": "parstore", "address": AdresseZeit1, "value" : str(value)}
     message = json.dumps(message_set)
@@ -142,6 +144,7 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abs
 
 if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abstandZuZweiterBefuellung > 0 and abstandZuZweiterBefuellung < 15:   
     WasGeandert = True
+    write_log("Will Zeit in Zukunft setzen wegen Zeit 2 zu nah (" + str(abstandZuZweiterBefuellung) + ")")
     value = minutesnow + 30
     message_set = {"command": "parstore", "address": AdresseZeit2, "value" : str(value)}
     message = json.dumps(message_set)
