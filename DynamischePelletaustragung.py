@@ -24,14 +24,16 @@ def on_message(client, userdata, message):
         Pelletstand = int(round(json.loads(message.payload)["value"],0))
 	
 def write_log(message):  
-    log = open("/home/pi/logs/Log_" + Datum + ".txt", "a+")
-    log.write(message)
-    log.close()
+    if ImmerLoggen:
+        log = open("/home/pi/logs/Log_" + Datum + ".txt", "a+")
+        log.write(message)
+        log.close()
 
 def write_times(message):
-    times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
-    times.write(message)
-    times.close()
+    if AenderungenLoggen:
+        times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
+        times.write(message)
+        times.close()
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -58,6 +60,11 @@ MinPelletstandZumFuellen = 35
 
 # In diesen Betriebszuständen wird die Pelletbefüllung verzögert
 KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
+
+# Hier einstellen ob bei jedem Aufruf geloggt werden soll
+ImmerLoggen = False
+# Hier Einstellen ob Änderungen an den Ladezeiten geloggt werden sollen
+AenderungenLoggen = True
 
 Connected = False
 Status = "Keiner"
@@ -129,7 +136,7 @@ abstandZuErsterBefuellung = ersteBefuellung-minutesnow
 abstandZuZweiterBefuellung = zweiteBefuellung-minutesnow
 
 
-if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abstandZuErsterBefuellung > 0 and abstandZuErsterBefuellung < 15:
+if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pelletstand < 80 and abstandZuErsterBefuellung > 0 and abstandZuErsterBefuellung < 15:
     WasGeandert = True
     value = minutesnow + 30
     message_set = {"command": "parstore", "address": AdresseZeit1, "value" : str(value)}
@@ -140,7 +147,7 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abs
     write_times(Uhrzeit + ":\n" + logtext + "\n")
     write_log(logtext)
 
-if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and abstandZuZweiterBefuellung > 0 and abstandZuZweiterBefuellung < 15:   
+if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pelletstand < 80 and abstandZuZweiterBefuellung > 0 and abstandZuZweiterBefuellung < 15:   
     WasGeandert = True
     value = minutesnow + 30
     message_set = {"command": "parstore", "address": AdresseZeit2, "value" : str(value)}
