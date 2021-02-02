@@ -25,14 +25,16 @@ def on_message(client, userdata, message):
 	
 def write_log(message):  
     if ImmerLoggen:
-        log = open("/home/pi/logs/Log_" + Datum + ".txt", "a+")
+        global pfadFuerLogs
+        log = open(pfadFuerLogs + "Log_" + Datum + ".txt", "a+")
         log.write(message)
         log.close()
 
 def write_times(message):
     if AenderungenLoggen:
-        times = open("/home/pi/logs/Zeitpunkte_" + Datum + ".txt", "a+")
-        times.write(message)
+        global pfadFuerLogs
+        times = open(pfadFuerLogs + "Zeitpunkte.txt", "a+")
+        times.write(Datum + " - " + Uhrzeit + "\n" + message + "\n")
         times.close()
 
 reload(sys)
@@ -41,31 +43,43 @@ sys.setdefaultencoding('utf-8')
 Datum = time.strftime("%Y-%m-%d", time.localtime())
 Uhrzeit = time.strftime("%H:%M:%S", time.localtime())
 
-# Hier die eigenen Daten eintragen
+# Hier den Pfad zum Script eintragen (wird auch für temporäre Daten genutzt)
+pfadZumScript = "/home/pi/script/"
+# Hier gewünschten Pfad für die logs eintragen
+pfadFuerLogs = "/home/pi/script/logs/"
+    
+# Hier die eigenen MQTT-Daten eintragen
 broker_address= "127.0.0.1"
 port = 1883
+
+# Adressen bitte mit 'sudo p4 menu | grep "Start der"' herausfinden.
+# Den Hexwert der ganz vorne bei Address angezeigt wird in Dezimal umrechnen und hier eintragen
+AdresseZeit1 = 60
+AdresseZeit2 = 516
+
+# Gewünschte Standard-Zeiten hier eintragen. Format : (Stunde, Minute, Sekunde)
+# Wird hier jeweils 0:00 Uhr eingetragen wird nur geladen wenn der Wert "MinPelletstandZumFuellen" unterschritten wird
+ResetT1 = datetime.time(0, 0, 0)
+ResetT2 = datetime.time(0, 0, 0)
+
+# Unter diesem %-Wert wird im Zustand "Betriebsbereit" gefüllt
+MinPelletstandZumFuellen = 35
+
+# Hier einstellen ob bei jedem Aufruf geloggt werden soll
+ImmerLoggen = True
+# Hier Einstellen ob Änderungen an den Ladezeiten geloggt werden sollen
+AenderungenLoggen = True
+
+# In diesen Betriebszuständen wird die Pelletbefüllung verzögert
+KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
 
 # Topics sollten so passen
 TopicStatus = "p4d2mqtt/sensor/Status/state"
 TopicPelletstand = "p4d2mqtt/sensor/FuellstandimPelletsbehaelter_0x71/state"
 TopicCommand = "mqtt2p4d/command"
 
-# Adressen bitte mit 'sudo p4 menu | grep "Start der"' herausfinden.
-# Den Hexwert der ganz vor bei Address angezigt wird in Dezimal umrechen und hier eintragen
-AdresseZeit1 = 60
-AdresseZeit2 = 516
-
-# Unter diesem %-Wert wird im Zustand "Betriebsbereit" gefüllt
-MinPelletstandZumFuellen = 35
-
-# In diesen Betriebszuständen wird die Pelletbefüllung verzögert
-KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
-
-# Hier einstellen ob bei jedem Aufruf geloggt werden soll
-ImmerLoggen = False
-# Hier Einstellen ob Änderungen an den Ladezeiten geloggt werden sollen
-AenderungenLoggen = True
-
+if not os.path.exists(pfadFuerLogs):
+    os.mkdir(pfadFuerLogs)
 Connected = False
 Status = "Keiner"
 Pelletstand = int(-1)
@@ -74,9 +88,11 @@ write_log(Uhrzeit + "\n")
 now = time.localtime()
 minutesnow = int(time.strftime("%H", now))*60 + int(time.strftime("%M",now))
 zerotime = datetime.datetime(2021, 1, 1,0,0,0)
+t1Minutes = int(datetime.time.strftime(ResetT1, "%H"))*60 + int(datetime.time.strftime(ResetT1, "%M"))
+t2Minutes = int(datetime.time.strftime(ResetT2, "%H"))*60 + int(datetime.time.strftime(ResetT2, "%M"))
 
-ersteBefuellung = int(os.popen('sudo p4 getp -a 0x003c | grep Value | cut -d " " -f3').read())
-zweiteBefuellung = int(os.popen('sudo p4 getp -a 0x0204 | grep Value | cut -d " " -f3').read())
+ersteBefuellung = int(os.popen('p4 getp -a ' + str(AdresseZeit1) + ' | grep Value | cut -d " " -f3').read())
+zweiteBefuellung = int(os.popen('p4 getp -a ' + str(AdresseZeit2) + ' | grep Value | cut -d " " -f3').read())
 
 client = mqttClient.Client("DynamicScript")
 client.on_connect = on_connect
@@ -92,6 +108,28 @@ while Connected != True:    #Wait for connection
         client.loop_stop()
         write_log("Verbindung zum Broker fehlgeschlagen! Verlasse Script\n\n")
         sys.exit()
+
+if not os.path.exists(pfadZumScript + "ResetTmp.txt"):
+    open(pfadZumScript + "ResetTmp.txt", 'aw').close()
+resetFile = open(pfadZumScript + "ResetTmp.txt", 'r+');
+lastResetDay = resetFile.readline();
+toDay = time.strftime("%d", time.localtime())
+if lastResetDay != toDay:
+    write_log("Schreibe Standard-Zeiten\n")
+    write_log("Zeit 1: " + datetime.time.strftime(ResetT1, "%H:%M") + " Uhr\n")
+    write_log("Zeit 2: " + datetime.time.strftime(ResetT2, "%H:%M") + " Uhr\n")
+
+    message_set1 = {"command": "parstore", "address": AdresseZeit1, "value" : str(t1Minutes)}
+    message_set2 = {"command": "parstore", "address": AdresseZeit2, "value" : str(t2Minutes)}
+
+    message = json.dumps(message_set1)
+    client.publish(TopicCommand, message)
+    time.sleep(1)
+    message = json.dumps(message_set2)
+    client.publish(TopicCommand, message)
+    resetFile.truncate(0)
+    resetFile.write(toDay)
+    resetFile.close()
 
 client.subscribe(TopicStatus)
 client.subscribe(TopicPelletstand)
@@ -109,32 +147,34 @@ WasGeandert = False
 
 if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
     WasGeandert = True
-    value = int((minutesnow + 5)) % 1440
-    address = AdresseZeit1
     
-    if value <= 720:
-        address = AdresseZeit1
-    
-    if value > 720:
-        address = AdresseZeit2
-    
-    message_set = {"command": "parstore", "address": address, "value" : str(value)}
-    message = json.dumps(message_set)
-    client.publish(TopicCommand, message)
-    
-    if address == AdresseZeit1:
-        logtext = "1."
+    if (os.path.exists(pfadZumScript + "laden.txt")):
+        value = int((minutesnow + 5)) % 1440
+        address = 0
+        if value <= 720:
+            address = AdresseZeit1
+            logtext = "1."
+        
+        if value > 720:
+            address = AdresseZeit2
+            logtext = "2."
+        
+        message_set = {"command": "parstore", "address": address, "value" : str(value)}
+        message = json.dumps(message_set)
+        client.publish(TopicCommand, message)
+
+        settime = (zerotime + datetime.timedelta(minutes = value)).time()
+        logtext = logtext + " Zeit auf " + datetime.time.strftime(settime, "%H:%M") + " Uhr (" + str(value) + ") gesetzt, da Pelletstand " + str(Pelletstand) + "% und Status " + str(Status) + "\n"
+        write_times(logtext)
+        write_log(logtext)
+        os.remove(pfadZumScript + "laden.txt")
+
     else:
-        logtext = "2."
-    
-    settime = (zerotime + datetime.timedelta(minutes = value)).time()
-    logtext = logtext + " Zeit auf " + datetime.time.strftime(settime, "%H:%M") + " Uhr (" + str(value) + ") gesetzt, da Pelletstand " + str(Pelletstand) + " und Status " + str(Status) + "\n"
-    write_times(Uhrzeit + ":\n" + logtext + "\n")
-    write_log(logtext)
+        open(pfadZumScript + "laden.txt", 'aw').close()
+        write_log("Schreibe laden.txt-Datei\n")
 
 abstandZuErsterBefuellung = ersteBefuellung-minutesnow
 abstandZuZweiterBefuellung = zweiteBefuellung-minutesnow
-
 
 if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pelletstand < 80 and abstandZuErsterBefuellung > 0 and abstandZuErsterBefuellung < 15:
     WasGeandert = True
@@ -157,9 +197,12 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pel
     logtext = "2. Zeit auf " + datetime.time.strftime(settime, "%H:%M") + " Uhr (" + str(value) + ") gesetzt, da Heizung heizt, Zeit zu 2. Befuellung " + str(abstandZuZweiterBefuellung) + "min, Pelletstand " + str(Pelletstand) + "% (Status: " + str(Status) + ")\n"
     write_times(Uhrzeit + ":\n" + logtext + "\n")
     write_log(logtext)
-   
+
 client.disconnect()
 client.loop_stop()
 if WasGeandert == False:
+    if (os.path.exists(pfadZumScript + "laden.txt")):
+        write_log("Lösche laden-Datei\n")
+        os.remove(pfadZumScript + "laden.txt")
     write_log("Keine Änderungen vorgenommen\n")
 write_log("\n")

@@ -46,7 +46,9 @@ Anschließend sollte eine solche Ausgabe kommen:
 Hier interessieren uns die Adressen: Address: **0x003c** und **Address: 0x0204**. Diese müssen in Dezimal umgerechnet werden und im Script entsprechend bei *AdresseZeit1* und *AdresseZeit2* am Anfang des Scripts eingetragen werden.
 
 ##### Parameter
-Mit dem Parameter *MinPelletstandZumFuellen* kann festgelegt werden, unter welchem Füllstand des Behälters im Modus "Betriebsbereit" gefüllt wird.
+* Mit dem Parameter *MinPelletstandZumFuellen* kann festgelegt werden, unter welchem Füllstand des Behälters im Modus "Betriebsbereit" gefüllt wird.
+* Die Parameter *ResetT1* und *ResetT2* legen fest, auf welche Zeiten die Befüllung standardmäßig eingestellt werden soll. Bei jeder ersten Ausführung des Scripts pro Tag werden diese Zeiten geschrieben. 
+* *ImmerLoggen* und *AenderungenLoggen*: Hier kann festgelegt werden wie viel geloggt werden soll.
 
 #### (Zyklische) Ausführung
 
@@ -55,24 +57,19 @@ Zuvor muss noch sichergestellt werden dass die Scrips ausführbar sind:
 ```sh
 $ cd /home/pi/script
 $ sudo chmod +x DynamischePelletaustragung.py
-$ sudo chmod +x Reset.py
-$ cd /home/pi
-$ mkdir logs
 ```
 Nun kann erstmals das Script ausgeführt werden:
 ```sh
 $ python /home/pi/script/DynamischePelletaustragung.py
 ```
-Sollte keine Asugabe (also auch kein Fehler) kommen ist die Ausführung geglückt.
+Sollte keine Ausgabe (also auch kein Fehler) kommen ist die Ausführung geglückt.
 
 Zur zyklischen Ausführung des Scripts habe ich einen CRON-Task verwendet. Die Einrichtung ist denkbar einfach:
 ```sh
 $ crontab -e
 ```
-Am Ende der Datei folgende Einträge machen:
+Am Ende der Datei folgenden Eintrag machen:
 ```
 */5 * * * * python /home/pi/script/DynamischePelletaustragung.py
-10 0 * * * python /home/pi/script/Reset.py
 ```
-Dadurch wird das Dynamische Script alle 5 Minuten, 7 Tage die Woche ausgeführt. Zudem werden einmal am Tag (um 0:10 Uhr) die Austragunszeiten auf Standardwerte gesetzt.
-Diese können im Reset-Script angepasst werden und sind standardmäßig auf 6 und 17 Uhr gestellt.
+Dadurch wird das Script alle 5 Minuten, 7 Tage die Woche ausgeführt.
