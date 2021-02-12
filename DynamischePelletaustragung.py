@@ -53,7 +53,7 @@ broker_address= "127.0.0.1"
 port = 1883
 
 # Adressen bitte mit 'sudo p4 menu | grep "Start der"' herausfinden.
-# Den Hexwert der ganz vorne bei Address angezeigt wird in Dezimal umrechnen und hier eintragen
+# Den Hexwert der ganz vor bei Address angezeigt wird in Dezimal umrechen und hier eintragen
 AdresseZeit1 = 60
 AdresseZeit2 = 516
 
@@ -111,10 +111,11 @@ while Connected != True:    #Wait for connection
 
 if not os.path.exists(pfadZumScript + "ResetTmp.txt"):
     open(pfadZumScript + "ResetTmp.txt", 'aw').close()
-resetFile = open(pfadZumScript + "ResetTmp.txt", 'r+');
+resetFile = open(pfadZumScript + "ResetTmp.txt", 'rt');
 lastResetDay = resetFile.readline();
-toDay = time.strftime("%d", time.localtime())
-if lastResetDay != toDay:
+resetFile.close()
+today = time.strftime("%d", time.localtime())
+if lastResetDay != today:
     write_log("Schreibe Standard-Zeiten\n")
     write_log("Zeit 1: " + datetime.time.strftime(ResetT1, "%H:%M") + " Uhr\n")
     write_log("Zeit 2: " + datetime.time.strftime(ResetT2, "%H:%M") + " Uhr\n")
@@ -127,8 +128,8 @@ if lastResetDay != toDay:
     time.sleep(1)
     message = json.dumps(message_set2)
     client.publish(TopicCommand, message)
-    resetFile.truncate(0)
-    resetFile.write(toDay)
+    resetFile = open(pfadZumScript + "ResetTmp.txt", 'wt');
+    resetFile.write(today)
     resetFile.close()
 
 client.subscribe(TopicStatus)
