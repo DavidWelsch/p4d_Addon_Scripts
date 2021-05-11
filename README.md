@@ -18,7 +18,9 @@ Unter Verwendung des Tools [p4d](https://github.com/horchi/linux-p4d#linux---p4-
 Hierfür werden unter Auswertung des aktuellen Betriebszustandes und der Füllmenge des Behälters dynamisch die Startzeiten der Befüllungen angepasst, sodass bei geringen Füllständen rechtzeitig gefüllt wird
 und im anderen Fall, wenn die Heizung noch heizt, die Füllung hinausgezögert wird, solange noch genügend Pellets vorhanden sind.
 
-Zusätzlich gibt es noch ein Reset-Script, das die Befüllungszeiten auf die Standard-Zeiten zurücksetzt.
+Eingebaut ist auch ein Reset, sodass die Befüllungszeiten auf die Standard-Zeiten zurückgesetzt werden, wenn man das möchte.
+
+Neu in Version 0.1.2: Das Script lässt den Pelletbehälter alle x Tage (voreingestellt sind 10) auf 0% fallen um einer übermäßigen Staubansammlung im Behälter entgegen zu wirken.
 
 ### "Installation"
 #### Voraussetzungen
@@ -47,6 +49,7 @@ Hier interessieren uns die Adressen: Address: **0x003c** und **Address: 0x0204**
 
 ##### Parameter
 * Mit dem Parameter *MinPelletstandZumFuellen* kann festgelegt werden, unter welchem Füllstand des Behälters im Modus "Betriebsbereit" gefüllt wird.
+* Der Parameter *TageFuer0Prozent* legt fest, nach welcher Anzahl an Tagen der Behälter auf 0% Füllung fallen gelassen wird.
 * Die Parameter *ResetT1* und *ResetT2* legen fest, auf welche Zeiten die Befüllung standardmäßig eingestellt werden soll. Bei jeder ersten Ausführung des Scripts pro Tag werden diese Zeiten geschrieben. 
 * *ImmerLoggen* und *AenderungenLoggen*: Hier kann festgelegt werden wie viel geloggt werden soll.
 
