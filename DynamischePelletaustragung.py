@@ -64,6 +64,8 @@ ResetT2 = datetime.time(0, 0, 0)
 
 # Unter diesem %-Wert wird im Zustand "Betriebsbereit" gefüllt
 MinPelletstandZumFuellen = 35
+# Nach dieser Anzahl an Tagen wird der Pelletbehälter auf 0 % gefahren.
+TageFuer0Prozent = 10
 
 # Hier einstellen ob bei jedem Aufruf geloggt werden soll
 ImmerLoggen = True
@@ -146,6 +148,28 @@ write_log("Status: " + str(Status) + ", Pelletstand: " + str(Pelletstand) + "%\n
 
 WasGeandert = False
 
+FMT = '%Y-%m-%d %H:%M:%S'
+nowStr = str(datetime.datetime.now())
+nowStr = nowStr[0:19]
+nowDT = datetime.datetime.strptime(nowStr, FMT)
+if not os.path.exists(pfadZumScript + "LastZero.txt"):
+    resetFile = open(pfadZumScript + "LastZero.txt", 'wt')
+    resetFile.write(str(nowDT))
+    resetFile.close()
+if Pelletstand < 1:
+    write_times("Pelletbehälter auf 0% gefallen. Setze LastZero.txt auf " + str(nowDT) + "\n")
+    resetFile = open(pfadZumScript + "LastZero.txt", 'wt');
+    resetFile.write(str(nowDT))
+    resetFile.close()
+lastZeroFile = open(pfadZumScript + "LastZero.txt", 'rt');
+lastZeroDT = lastZeroFile.readline().strip();
+lastZeroFile.close()
+tDelta = nowDT - datetime.datetime.strptime(lastZeroDT, FMT)
+if tDelta.days > TageFuer0Prozent:
+    write_log("Seit über " + str(TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
+    write_log("Script wird abgebrochen um Behälter komplett zu leeren\n\n")
+    exit()
+    
 if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
     WasGeandert = True
     
