@@ -69,7 +69,7 @@ TageFuer0Prozent = 10
 
 # Hier einstellen ob bei jedem Aufruf geloggt werden soll
 ImmerLoggen = True
-# Hier Einstellen ob Änderungen an den Ladezeiten geloggt werden sollen
+# Hier Einstelen ob Änderungen an den Ladezeiten geloggt werden sollen
 AenderungenLoggen = True
 
 # In diesen Betriebszuständen wird die Pelletbefüllung verzögert
@@ -78,10 +78,11 @@ KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
 # Topics sollten so passen
 TopicStatus = "p4d2mqtt/sensor/Status/state"
 TopicPelletstand = "p4d2mqtt/sensor/FuellstandimPelletsbehaelter_0x71/state"
-TopicCommand = "mqtt2p4d/command"
+TopicCommand = "p4d2mqtt/command"
 
 if not os.path.exists(pfadFuerLogs):
     os.mkdir(pfadFuerLogs)
+    
 Connected = False
 Status = "Keiner"
 Pelletstand = int(-1)
@@ -158,6 +159,9 @@ if not os.path.exists(pfadZumScript + "LastZero.txt"):
     resetFile.close()
 if Pelletstand < 1:
     write_times("Pelletbehälter auf 0% gefallen. Setze LastZero.txt auf " + str(nowDT) + "\n")
+    if (os.path.exists(pfadZumScript + "ToZero.txt")):
+        write_times("Lösche ToZero.txt\n")
+        os.remove(pfadZumScript + "ToZero.txt")
     resetFile = open(pfadZumScript + "LastZero.txt", 'wt');
     resetFile.write(str(nowDT))
     resetFile.close()
@@ -165,9 +169,13 @@ lastZeroFile = open(pfadZumScript + "LastZero.txt", 'rt');
 lastZeroDT = lastZeroFile.readline().strip();
 lastZeroFile.close()
 tDelta = nowDT - datetime.datetime.strptime(lastZeroDT, FMT)
-if tDelta.days > TageFuer0Prozent:
+if tDelta.days > TageFuer0Prozent and TageFuer0Prozent != 0:
     write_log("Seit über " + str(TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
     write_log("Script wird abgebrochen um Behälter komplett zu leeren\n\n")
+    if not os.path.exists(pfadZumScript + "ToZero.txt"):
+        write_times("Lasse Pelletbehälter auf 0% fallen\n")
+        open(pfadZumScript + "ToZero.txt", 'aw').close()
+        write_log("Schreibe ToZero.txt-Datei\n")
     exit()
     
 if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
