@@ -1,3 +1,4 @@
+
 # p4d_Addon_Scripts
 Scripts zur Verbesserung der Pelletaustragung bei Fröling-Kesseln
 
@@ -25,8 +26,8 @@ Neu in Version 0.1.2: Das Script lässt den Pelletbehälter alle x Tage (voreing
 ### "Installation"
 #### Voraussetzungen
 * Für die Verwendung des Scripts muss ein MQTT-Broker laufen, der sowohl im Script als auch im p4d angegeben ist. Am Einfachsten ist hier die Verwendung eines lokalen MQTT-Brokers, wie 
-[hier](https://www.holzheizer-forum.de/index.php?thread/50090-fr%C3%B6ling-announce-p4d-visualisierung-und-einstellung-der-s-3200-via-com1/&postID=182495#post182495)
-ebenfalls von horchi beschrieben. Auf diese Verwendung ist das Script auch ausgelegt, natürlich kann aber die URL des Brokers angepasst werden.
+[hier.](https://neuendorf-online.de/posts/heimautomatisierung/mqtt-broker-mosquitto-installieren/)
+Bei der Nutzerverwaltung ist es möglich, für p4d und das Script den selben Nutzer zu verwenden.
 
 * Zudem muss für die Verwendung von MQTT in python paho-mqtt installiert sein.
 ```sh
@@ -52,6 +53,7 @@ Hier interessieren uns die Adressen: Address: **0x003c** und **Address: 0x0204**
 * Der Parameter *TageFuer0Prozent* legt fest, nach welcher Anzahl an Tagen der Behälter auf 0% Füllung fallen gelassen wird.
 * Die Parameter *ResetT1* und *ResetT2* legen fest, auf welche Zeiten die Befüllung standardmäßig eingestellt werden soll. Bei jeder ersten Ausführung des Scripts pro Tag werden diese Zeiten geschrieben. 
 * *ImmerLoggen* und *AenderungenLoggen*: Hier kann festgelegt werden wie viel geloggt werden soll.
+* Die beiden Parameter *username* und *password* müssen einem Nutzername/Passwort-Paar entsprechen, das vorher bei der Installation/Einrichtung von mosquitto erstellt wurde.
 
 #### (Zyklische) Ausführung
 
