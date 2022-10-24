@@ -1,5 +1,7 @@
 #-*- coding:utf-8 -*-
 
+#Version 0.1.5
+
 import os
 import time
 import datetime
@@ -51,8 +53,8 @@ pfadFuerLogs = "/home/pi/script/logs/"
 # Hier die eigenen MQTT-Daten eintragen
 broker_address= "127.0.0.1"
 port = 1883
-username = "user"
-password = "password"
+username = ""
+password = ""
 
 # Adressen bitte mit 'sudo p4 menu | grep "Start der"' herausfinden.
 # Den Hexwert der ganz vor bei Address angezeigt wird in Dezimal umrechen und hier eintragen
@@ -102,7 +104,8 @@ zweiteBefuellung = int(os.popen('p4 getp -a ' + str(AdresseZeit2) + ' | grep Val
 client = mqttClient.Client("DynamicScript")
 client.on_connect = on_connect
 client.on_message = on_message
-client.username_pw_set(username, password)
+if username != "":
+    client.username_pw_set(username, password)
 client.connect(broker_address, port=port)
 client.loop_start()
 countConnectionTries = 0
