@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
 
-#Version 0.1.5
+#Version 0.1.6
 
 import os
 import time
@@ -67,14 +67,14 @@ ResetT1 = datetime.time(0, 0, 0)
 ResetT2 = datetime.time(0, 0, 0)
 
 # Unter diesem %-Wert wird im Zustand "Betriebsbereit" gefüllt
-MinPelletstandZumFuellen = 35
+MinPelletstandZumFuellen = 30
 # Nach dieser Anzahl an Tagen wird der Pelletbehälter auf 0 % gefahren.
-TageFuer0Prozent = 10
+TageFuer0Prozent = 30
 
 # Hier einstellen ob bei jedem Aufruf geloggt werden soll
 ImmerLoggen = True
 # Hier Einstelen ob Änderungen an den Ladezeiten geloggt werden sollen
-AenderungenLoggen = True
+AenderungenLoggen = False
 
 # In diesen Betriebszuständen wird die Pelletbefüllung verzögert
 KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
@@ -118,6 +118,49 @@ while Connected != True:    #Wait for connection
         write_log("Verbindung zum Broker fehlgeschlagen! Verlasse Script\n\n")
         sys.exit()
 
+client.subscribe(TopicStatus)
+client.subscribe(TopicPelletstand)
+
+countWaitingTime = 0
+while Status == "Keiner" or Pelletstand == -1:
+    time.sleep(1)
+    countWaitingTime = countWaitingTime+1
+    if countWaitingTime > 10:
+        break
+
+write_log("Status: " + str(Status) + ", Pelletstand: " + str(Pelletstand) + "%\n") 
+
+WasGeandert = False
+
+FMT = '%Y-%m-%d %H:%M:%S'
+nowStr = str(datetime.datetime.now())
+nowStr = nowStr[0:19]
+nowDT = datetime.datetime.strptime(nowStr, FMT)
+if not os.path.exists(pfadZumScript + "LastZero.txt"):
+    lastZeroFile = open(pfadZumScript + "LastZero.txt", 'wt')
+    lastZeroFile.write(str(nowDT))
+    lastZeroFile.close()
+if Pelletstand < 1:
+    write_times("Pelletbehälter auf 0% gefallen. Setze LastZero.txt auf " + str(nowDT) + "\n")
+    if (os.path.exists(pfadZumScript + "ToZero.txt")):
+        write_times("Lösche ToZero.txt\n")
+        os.remove(pfadZumScript + "ToZero.txt")
+    lastZeroFile = open(pfadZumScript + "LastZero.txt", 'wt');
+    lastZeroFile.write(str(nowDT))
+    lastZeroFile.close()
+lastZeroFile2 = open(pfadZumScript + "LastZero.txt", 'rt');
+lastZeroDT = lastZeroFile2.readline().strip();
+lastZeroFile2.close()
+tDelta = nowDT - datetime.datetime.strptime(lastZeroDT, FMT)
+if tDelta.days > TageFuer0Prozent and TageFuer0Prozent != 0:
+    write_log("Seit über " + str(TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
+    write_log("Script wird abgebrochen um Behälter komplett zu leeren\n\n")
+    if not os.path.exists(pfadZumScript + "ToZero.txt"):
+        write_times("Lasse Pelletbehälter auf 0% fallen\n")
+        open(pfadZumScript + "ToZero.txt", 'aw').close()
+        write_log("Schreibe ToZero.txt-Datei\n")
+    exit()
+    
 if not os.path.exists(pfadZumScript + "ResetTmp.txt"):
     open(pfadZumScript + "ResetTmp.txt", 'aw').close()
 resetFile = open(pfadZumScript + "ResetTmp.txt", 'rt');
@@ -139,51 +182,8 @@ if lastResetDay != today:
     client.publish(TopicCommand, message)
     resetFile = open(pfadZumScript + "ResetTmp.txt", 'wt');
     resetFile.write(today)
-    resetFile.close()
+    resetFile.close()    
 
-client.subscribe(TopicStatus)
-client.subscribe(TopicPelletstand)
-
-countWaitingTime = 0
-while Status == "Keiner" or Pelletstand == -1:
-    time.sleep(1)
-    countWaitingTime = countWaitingTime+1
-    if countWaitingTime > 10:
-        break
-
-write_log("Status: " + str(Status) + ", Pelletstand: " + str(Pelletstand) + "%\n") 
-
-WasGeandert = False
-
-FMT = '%Y-%m-%d %H:%M:%S'
-nowStr = str(datetime.datetime.now())
-nowStr = nowStr[0:19]
-nowDT = datetime.datetime.strptime(nowStr, FMT)
-if not os.path.exists(pfadZumScript + "LastZero.txt"):
-    resetFile = open(pfadZumScript + "LastZero.txt", 'wt')
-    resetFile.write(str(nowDT))
-    resetFile.close()
-if Pelletstand < 1:
-    write_times("Pelletbehälter auf 0% gefallen. Setze LastZero.txt auf " + str(nowDT) + "\n")
-    if (os.path.exists(pfadZumScript + "ToZero.txt")):
-        write_times("Lösche ToZero.txt\n")
-        os.remove(pfadZumScript + "ToZero.txt")
-    resetFile = open(pfadZumScript + "LastZero.txt", 'wt');
-    resetFile.write(str(nowDT))
-    resetFile.close()
-lastZeroFile = open(pfadZumScript + "LastZero.txt", 'rt');
-lastZeroDT = lastZeroFile.readline().strip();
-lastZeroFile.close()
-tDelta = nowDT - datetime.datetime.strptime(lastZeroDT, FMT)
-if tDelta.days > TageFuer0Prozent and TageFuer0Prozent != 0:
-    write_log("Seit über " + str(TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
-    write_log("Script wird abgebrochen um Behälter komplett zu leeren\n\n")
-    if not os.path.exists(pfadZumScript + "ToZero.txt"):
-        write_times("Lasse Pelletbehälter auf 0% fallen\n")
-        open(pfadZumScript + "ToZero.txt", 'aw').close()
-        write_log("Schreibe ToZero.txt-Datei\n")
-    exit()
-    
 if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
     WasGeandert = True
     
