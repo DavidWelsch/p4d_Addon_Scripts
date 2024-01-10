@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
 
-#Version 0.1.6
+#Version 0.1.7
 
 import os
 import time
@@ -82,7 +82,11 @@ KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
 # Topics sollten so passen
 TopicStatus = "p4d2mqtt/sensor/Status/state"
 TopicPelletstand = "p4d2mqtt/sensor/FuellstandimPelletsbehaelter_0x71/state"
-TopicCommand = "p4d2mqtt/command"
+TopicCommand = "p4d2mqtt/s3200/request"
+CommandText = "parset"
+#p4d Version < 0.9.54
+#TopicCommand = "p4d2mqtt/command" - 
+#CommandText = "parstore"
 
 if not os.path.exists(pfadFuerLogs):
     os.mkdir(pfadFuerLogs)
@@ -172,8 +176,8 @@ if lastResetDay != today:
     write_log("Zeit 1: " + datetime.time.strftime(ResetT1, "%H:%M") + " Uhr\n")
     write_log("Zeit 2: " + datetime.time.strftime(ResetT2, "%H:%M") + " Uhr\n")
 
-    message_set1 = {"command": "parstore", "address": AdresseZeit1, "value" : str(t1Minutes)}
-    message_set2 = {"command": "parstore", "address": AdresseZeit2, "value" : str(t2Minutes)}
+    message_set1 = {"command": CommandText, "address": AdresseZeit1, "value" : str(t1Minutes)}
+    message_set2 = {"command": CommandText, "address": AdresseZeit2, "value" : str(t2Minutes)}
 
     message = json.dumps(message_set1)
     client.publish(TopicCommand, message)
@@ -198,7 +202,9 @@ if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
             address = AdresseZeit2
             logtext = "2."
         
-        message_set = {"command": "parstore", "address": address, "value" : str(value)}
+        message_set = {"command": CommandText, "address": address, "value" : str(value)}
+        
+        
         message = json.dumps(message_set)
         client.publish(TopicCommand, message)
 
@@ -218,7 +224,9 @@ abstandZuZweiterBefuellung = zweiteBefuellung-minutesnow
 if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pelletstand < 80 and abstandZuErsterBefuellung > 0 and abstandZuErsterBefuellung < 15:
     WasGeandert = True
     value = minutesnow + 30
-    message_set = {"command": "parstore", "address": AdresseZeit1, "value" : str(value)}
+    
+    message_set = {"command": CommandText, "address": AdresseZeit1, "value" : str(value)}
+    
     message = json.dumps(message_set)
     client.publish(TopicCommand, message)
     settime = (zerotime + datetime.timedelta(minutes = value)).time()
@@ -229,7 +237,9 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pel
 if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pelletstand < 80 and abstandZuZweiterBefuellung > 0 and abstandZuZweiterBefuellung < 15:   
     WasGeandert = True
     value = minutesnow + 30
-    message_set = {"command": "parstore", "address": AdresseZeit2, "value" : str(value)}
+    
+    message_set = {"command": CommandText, "address": AdresseZeit2, "value" : str(value)}
+    
     message = json.dumps(message_set)
     client.publish(TopicCommand, message)
     settime = (zerotime + datetime.timedelta(minutes = value)).time()
