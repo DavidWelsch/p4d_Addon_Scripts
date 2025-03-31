@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
 
-#Version 0.1.7
+#Version 0.2.0
 
 import os
 import time
@@ -8,6 +8,7 @@ import datetime
 import paho.mqtt.client as mqttClient
 import sys
 import json
+import DynamischePelletaustragungParameter
 
 def on_connect(client, userdata, flags, rc):
  
@@ -26,16 +27,14 @@ def on_message(client, userdata, message):
         Pelletstand = int(round(json.loads(message.payload)["value"],0))
 	
 def write_log(message):  
-    if ImmerLoggen:
-        global pfadFuerLogs
-        log = open(pfadFuerLogs + "Log_" + Datum + ".txt", "a+")
+    if DynamischePelletaustragungParameter.ImmerLoggen:
+        log = open(DynamischePelletaustragungParameter.pfadFuerLogs + "Log_" + Datum + ".txt", "a+")
         log.write(message)
         log.close()
 
 def write_times(message):
-    if AenderungenLoggen:
-        global pfadFuerLogs
-        times = open(pfadFuerLogs + "Zeitpunkte.txt", "a+")
+    if DynamischePelletaustragungParameter.AenderungenLoggen:
+        times = open(DynamischePelletaustragungParameter.pfadFuerLogs + "Zeitpunkte.txt", "a+")
         times.write(Datum + " - " + Uhrzeit + "\n" + message + "\n")
         times.close()
 
@@ -44,37 +43,6 @@ sys.setdefaultencoding('utf-8')
 
 Datum = time.strftime("%Y-%m-%d", time.localtime())
 Uhrzeit = time.strftime("%H:%M:%S", time.localtime())
-
-# Hier den Pfad zum Script eintragen (wird auch für temporäre Daten genutzt)
-pfadZumScript = "/home/pi/script/"
-# Hier gewünschten Pfad für die logs eintragen
-pfadFuerLogs = "/home/pi/script/logs/"
-    
-# Hier die eigenen MQTT-Daten eintragen
-broker_address= "127.0.0.1"
-port = 1883
-username = ""
-password = ""
-
-# Adressen bitte mit 'sudo p4 menu | grep "Start der"' herausfinden.
-# Den Hexwert der ganz vor bei Address angezeigt wird in Dezimal umrechen und hier eintragen
-AdresseZeit1 = 60
-AdresseZeit2 = 516
-
-# Gewünschte Standard-Zeiten hier eintragen. Format : (Stunde, Minute, Sekunde)
-# Wird hier jeweils 0:00 Uhr eingetragen wird nur geladen wenn der Wert "MinPelletstandZumFuellen" unterschritten wird
-ResetT1 = datetime.time(0, 0, 0)
-ResetT2 = datetime.time(0, 0, 0)
-
-# Unter diesem %-Wert wird im Zustand "Betriebsbereit" gefüllt
-MinPelletstandZumFuellen = 30
-# Nach dieser Anzahl an Tagen wird der Pelletbehälter auf 0 % gefahren.
-TageFuer0Prozent = 30
-
-# Hier einstellen ob bei jedem Aufruf geloggt werden soll
-ImmerLoggen = True
-# Hier Einstelen ob Änderungen an den Ladezeiten geloggt werden sollen
-AenderungenLoggen = False
 
 # In diesen Betriebszuständen wird die Pelletbefüllung verzögert
 KeineFuellungStatusList = ["Vorbereitung", "Vorwärmen", "Zünden", "Heizen"]
@@ -88,8 +56,8 @@ CommandText = "parset"
 #TopicCommand = "p4d2mqtt/command" - 
 #CommandText = "parstore"
 
-if not os.path.exists(pfadFuerLogs):
-    os.mkdir(pfadFuerLogs)
+if not os.path.exists(DynamischePelletaustragungParameter.pfadFuerLogs):
+    os.mkdir(DynamischePelletaustragungParameter.pfadFuerLogs)
     
 Connected = False
 Status = "Keiner"
@@ -99,18 +67,18 @@ write_log(Uhrzeit + "\n")
 now = time.localtime()
 minutesnow = int(time.strftime("%H", now))*60 + int(time.strftime("%M",now))
 zerotime = datetime.datetime(2021, 1, 1,0,0,0)
-t1Minutes = int(datetime.time.strftime(ResetT1, "%H"))*60 + int(datetime.time.strftime(ResetT1, "%M"))
-t2Minutes = int(datetime.time.strftime(ResetT2, "%H"))*60 + int(datetime.time.strftime(ResetT2, "%M"))
+t1Minutes = int(datetime.time.strftime(DynamischePelletaustragungParameter.ResetT1, "%H"))*60 + int(datetime.time.strftime(DynamischePelletaustragungParameter.ResetT1, "%M"))
+t2Minutes = int(datetime.time.strftime(DynamischePelletaustragungParameter.ResetT2, "%H"))*60 + int(datetime.time.strftime(DynamischePelletaustragungParameter.ResetT2, "%M"))
 
-ersteBefuellung = int(os.popen('p4 getp -a ' + str(AdresseZeit1) + ' | grep Value | cut -d " " -f3').read())
-zweiteBefuellung = int(os.popen('p4 getp -a ' + str(AdresseZeit2) + ' | grep Value | cut -d " " -f3').read())
+ersteBefuellung = int(os.popen('p4 getp -a ' + str(DynamischePelletaustragungParameter.AdresseZeit1) + ' | grep Value | cut -d " " -f3').read())
+zweiteBefuellung = int(os.popen('p4 getp -a ' + str(DynamischePelletaustragungParameter.AdresseZeit2) + ' | grep Value | cut -d " " -f3').read())
 
 client = mqttClient.Client("DynamicScript")
 client.on_connect = on_connect
 client.on_message = on_message
-if username != "":
-    client.username_pw_set(username, password)
-client.connect(broker_address, port=port)
+if DynamischePelletaustragungParameter.username != "":
+    client.username_pw_set(DynamischePelletaustragungParameter.username, DynamischePelletaustragungParameter.password)
+client.connect(DynamischePelletaustragungParameter.broker_address, port=DynamischePelletaustragungParameter.port)
 client.loop_start()
 countConnectionTries = 0
 while Connected != True:    #Wait for connection
@@ -140,66 +108,80 @@ FMT = '%Y-%m-%d %H:%M:%S'
 nowStr = str(datetime.datetime.now())
 nowStr = nowStr[0:19]
 nowDT = datetime.datetime.strptime(nowStr, FMT)
-if not os.path.exists(pfadZumScript + "LastZero.txt"):
-    lastZeroFile = open(pfadZumScript + "LastZero.txt", 'wt')
+if not os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "LastZero.txt"):
+    lastZeroFile = open(DynamischePelletaustragungParameter.pfadZumScript + "LastZero.txt", 'wt')
     lastZeroFile.write(str(nowDT))
     lastZeroFile.close()
 if Pelletstand < 1:
     write_times("Pelletbehälter auf 0% gefallen. Setze LastZero.txt auf " + str(nowDT) + "\n")
-    if (os.path.exists(pfadZumScript + "ToZero.txt")):
+    if (os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "ToZero.txt")):
         write_times("Lösche ToZero.txt\n")
-        os.remove(pfadZumScript + "ToZero.txt")
-    lastZeroFile = open(pfadZumScript + "LastZero.txt", 'wt');
+        os.remove(DynamischePelletaustragungParameter.pfadZumScript + "ToZero.txt")
+    lastZeroFile = open(DynamischePelletaustragungParameter.pfadZumScript + "LastZero.txt", 'wt');
     lastZeroFile.write(str(nowDT))
     lastZeroFile.close()
-lastZeroFile2 = open(pfadZumScript + "LastZero.txt", 'rt');
+lastZeroFile2 = open(DynamischePelletaustragungParameter.pfadZumScript + "LastZero.txt", 'rt');
 lastZeroDT = lastZeroFile2.readline().strip();
 lastZeroFile2.close()
 tDelta = nowDT - datetime.datetime.strptime(lastZeroDT, FMT)
-if tDelta.days > TageFuer0Prozent and TageFuer0Prozent != 0:
-    write_log("Seit über " + str(TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
+print(tDelta)
+print(tDelta.days)
+if tDelta.days >= DynamischePelletaustragungParameter.TageFuer0Prozent and DynamischePelletaustragungParameter.TageFuer0Prozent != 0:
+    write_log("Seit über " + str(DynamischePelletaustragungParameter.TageFuer0Prozent) + " Tagen Behälter nicht leer gefahren.\n")
     write_log("Script wird abgebrochen um Behälter komplett zu leeren\n\n")
-    if not os.path.exists(pfadZumScript + "ToZero.txt"):
+    if ersteBefuellung != 0 or zweiteBefuellung != 0:
+        write_log("Zeiten in Heizung sind nicht 0 - setze auf 0 um Befuellungen zu vermeiden\n")
+        write_times("Setze beide Zeiten auf 0:00 um Befuellungen zu vermeiden\n")
+        message_set1 = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit1, "value" : str(0)}
+        message_set2 = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit2, "value" : str(0)}
+        message = json.dumps(message_set1)
+        client.publish(TopicCommand, message)
+        time.sleep(1)
+        message = json.dumps(message_set2)
+        client.publish(TopicCommand, message)
+        
+        
+    if not os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "ToZero.txt"):
         write_times("Lasse Pelletbehälter auf 0% fallen\n")
-        open(pfadZumScript + "ToZero.txt", 'aw').close()
+        open(DynamischePelletaustragungParameter.pfadZumScript + "ToZero.txt", 'aw').close()
         write_log("Schreibe ToZero.txt-Datei\n")
     exit()
     
-if not os.path.exists(pfadZumScript + "ResetTmp.txt"):
-    open(pfadZumScript + "ResetTmp.txt", 'aw').close()
-resetFile = open(pfadZumScript + "ResetTmp.txt", 'rt');
+if not os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "ResetTmp.txt"):
+    open(DynamischePelletaustragungParameter.pfadZumScript + "ResetTmp.txt", 'aw').close()
+resetFile = open(DynamischePelletaustragungParameter.pfadZumScript + "ResetTmp.txt", 'rt');
 lastResetDay = resetFile.readline();
 resetFile.close()
 today = time.strftime("%d", time.localtime())
 if lastResetDay != today:
     write_log("Schreibe Standard-Zeiten\n")
-    write_log("Zeit 1: " + datetime.time.strftime(ResetT1, "%H:%M") + " Uhr\n")
-    write_log("Zeit 2: " + datetime.time.strftime(ResetT2, "%H:%M") + " Uhr\n")
+    write_log("Zeit 1: " + datetime.time.strftime(DynamischePelletaustragungParameter.ResetT1, "%H:%M") + " Uhr\n")
+    write_log("Zeit 2: " + datetime.time.strftime(DynamischePelletaustragungParameter.ResetT2, "%H:%M") + " Uhr\n")
 
-    message_set1 = {"command": CommandText, "address": AdresseZeit1, "value" : str(t1Minutes)}
-    message_set2 = {"command": CommandText, "address": AdresseZeit2, "value" : str(t2Minutes)}
+    message_set1 = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit1, "value" : str(t1Minutes)}
+    message_set2 = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit2, "value" : str(t2Minutes)}
 
     message = json.dumps(message_set1)
     client.publish(TopicCommand, message)
     time.sleep(1)
     message = json.dumps(message_set2)
     client.publish(TopicCommand, message)
-    resetFile = open(pfadZumScript + "ResetTmp.txt", 'wt');
+    resetFile = open(DynamischePelletaustragungParameter.pfadZumScript + "ResetTmp.txt", 'wt');
     resetFile.write(today)
     resetFile.close()    
 
-if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
+if Status == "Betriebsbereit" and Pelletstand < DynamischePelletaustragungParameter.MinPelletstandZumFuellen:
     WasGeandert = True
     
-    if (os.path.exists(pfadZumScript + "laden.txt")):
+    if (os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "laden.txt")):
         value = int((minutesnow + 5)) % 1440
         address = 0
         if value <= 720:
-            address = AdresseZeit1
+            address = DynamischePelletaustragungParameter.AdresseZeit1
             logtext = "1."
         
         if value > 720:
-            address = AdresseZeit2
+            address = DynamischePelletaustragungParameter.AdresseZeit2
             logtext = "2."
         
         message_set = {"command": CommandText, "address": address, "value" : str(value)}
@@ -212,10 +194,10 @@ if Status == "Betriebsbereit" and Pelletstand < MinPelletstandZumFuellen:
         logtext = logtext + " Zeit auf " + datetime.time.strftime(settime, "%H:%M") + " Uhr (" + str(value) + ") gesetzt, da Pelletstand " + str(Pelletstand) + "% und Status " + str(Status) + "\n"
         write_times(logtext)
         write_log(logtext)
-        os.remove(pfadZumScript + "laden.txt")
+        os.remove(DynamischePelletaustragungParameter.pfadZumScript + "laden.txt")
 
     else:
-        open(pfadZumScript + "laden.txt", 'aw').close()
+        open(DynamischePelletaustragungParameter.pfadZumScript + "laden.txt", 'aw').close()
         write_log("Schreibe laden.txt-Datei\n")
 
 abstandZuErsterBefuellung = ersteBefuellung-minutesnow
@@ -225,7 +207,7 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pel
     WasGeandert = True
     value = minutesnow + 30
     
-    message_set = {"command": CommandText, "address": AdresseZeit1, "value" : str(value)}
+    message_set = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit1, "value" : str(value)}
     
     message = json.dumps(message_set)
     client.publish(TopicCommand, message)
@@ -238,7 +220,7 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pel
     WasGeandert = True
     value = minutesnow + 30
     
-    message_set = {"command": CommandText, "address": AdresseZeit2, "value" : str(value)}
+    message_set = {"command": CommandText, "address": DynamischePelletaustragungParameter.AdresseZeit2, "value" : str(value)}
     
     message = json.dumps(message_set)
     client.publish(TopicCommand, message)
@@ -250,8 +232,8 @@ if any(Status in s for s in KeineFuellungStatusList) and Pelletstand > 1 and Pel
 client.disconnect()
 client.loop_stop()
 if WasGeandert == False:
-    if (os.path.exists(pfadZumScript + "laden.txt")):
+    if (os.path.exists(DynamischePelletaustragungParameter.pfadZumScript + "laden.txt")):
         write_log("Lösche laden-Datei\n")
-        os.remove(pfadZumScript + "laden.txt")
+        os.remove(DynamischePelletaustragungParameter.pfadZumScript + "laden.txt")
     write_log("Keine Änderungen vorgenommen\n")
 write_log("\n")
